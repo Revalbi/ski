@@ -1,0 +1,36 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "C/C++: cl.exe Aktive Datei kompilieren",
+			"command": "cl.exe",
+			"args": [
+				"-I",
+                "${env:SFML_PATH}\\include",
+				"/Zi",
+				"/EHsc",
+				"/nologo",
+				"/Fe:",
+				"${fileDirname}\\${fileBasenameNoExtension}.exe",
+				"${file}",
+				"/link",
+                "sfml-graphics.lib",
+                "sfml-window.lib",
+                "sfml-system.lib",
+                "/LIBPATH:${env:SFML_PATH}\\lib"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "Compiler: cl.exe"
+		}
+	]
+}
