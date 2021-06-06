@@ -10,10 +10,11 @@
 
 const float v_le = 50;  // pixels per second
 const float fa_scale = 0.15;
+const float szikla_scale = 0.15;
 const float zaszlo_scale = 0.1f;
 const float zaszlo_tavolsag = 200.0f;
 
-sf::Texture fa_texture, zaszlo_texture_kek, zaszlo_texture_piros;
+sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek, zaszlo_texture_piros;
 
 int selected = -1;
 int moved = -1;
@@ -46,6 +47,23 @@ class Fa : public Bigyo {
  private:
   sf::Sprite s;
 };
+
+class Szikla : public Bigyo {
+ public:
+  Szikla(float x, float y) : sz{szikla_texture} {
+    sz.setScale(szikla_scale, szikla_scale);
+    sz.setPosition(x, y);
+  }
+  Szikla(sf::Vector2f const& v) : Szikla(v.x, v.y) {}
+  void setPosition(float x, float y) { sz.setPosition(x, y); }
+  sf::FloatRect getGlobalBounds() const { return sz.getGlobalBounds(); }
+  void draw(sf::RenderTarget& rt) const { rt.draw(sz); }
+  void move(const sf::Vector2f& offset) { sz.move(offset); }
+
+ private:
+  sf::Sprite sz;
+};
+
 
 class Zaszlok : public Bigyo {
  public:
@@ -86,6 +104,7 @@ std::vector<Bigyo*> bigyok;
 
 void init(std::string fn) {
   fa_texture.loadFromFile("fa2.png");
+  szikla_texture.loadFromFile("szikla.png");
   zaszlo_texture_kek.loadFromFile("zaszlo_kek.png");
   zaszlo_texture_piros.loadFromFile("zaszlo_piros.png");
 
@@ -164,6 +183,13 @@ void on_key_down(sf::Event::KeyEvent const& e) {
           new Fa(eger_pos - sf::Vector2f(m.x, m.y) * fa_scale * 0.5f));
       break;
     }
+    case sf::Keyboard::S: {
+      sf::Vector2u m = szikla_texture.getSize();
+      bigyok.push_back(
+          new Szikla(eger_pos - sf::Vector2f(m.x, m.y) * szikla_scale * 0.5f));
+      break;
+    }
+
     case sf::Keyboard::P: {
       sf::Vector2u m = zaszlo_texture_piros.getSize();
       bigyok.push_back(new Zaszlok(
