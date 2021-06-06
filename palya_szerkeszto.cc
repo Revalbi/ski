@@ -205,13 +205,13 @@ void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
     case sf::Keyboard::P: {
       sf::Vector2u m = zaszlo_texture_piros.getSize();
       bigyok.push_back(new Zaszlok(
-          eger_pos - sf::Vector2f(m.x, m.y) * fa_scale * 0.5f, false));
+          eger_pos - sf::Vector2f(m.x, m.y) * zaszlo_scale * 0.5f - sf::Vector2f{zaszlo_tavolsag * 0.5f, 0}, false));
       break;
     }
     case sf::Keyboard::K: {
       sf::Vector2u m = zaszlo_texture_kek.getSize();
       bigyok.push_back(new Zaszlok(
-          eger_pos - sf::Vector2f(m.x, m.y) * fa_scale * 0.5f, true));
+          eger_pos - sf::Vector2f(m.x, m.y) * zaszlo_scale * 0.5f - sf::Vector2f{zaszlo_tavolsag * 0.5f, 0}, true));
       break;
     }
     case sf::Keyboard::Delete: {
