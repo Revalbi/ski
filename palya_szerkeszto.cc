@@ -10,15 +10,21 @@
 
 const float v_le = 50;  // pixels per second
 const float fa_scale = 0.15;
-const float szikla_scale = 0.15;
+const float szikla_scale = 0.07;
 const float zaszlo_scale = 0.1f;
 const float zaszlo_tavolsag = 200.0f;
 
-sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek, zaszlo_texture_piros;
+sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
+    zaszlo_texture_piros;
 
 int selected = -1;
 int moved = -1;
 sf::Vector2f eger_pos;
+
+std::ostream& operator<<(std::ostream& os, sf::Vector2f const& v) {
+  os << "(" << v.x << ", " << v.y << ")";
+  return os;
+}
 
 struct hely {
   float x, y;
@@ -63,7 +69,6 @@ class Szikla : public Bigyo {
  private:
   sf::Sprite sz;
 };
-
 
 class Zaszlok : public Bigyo {
  public:
@@ -145,23 +150,30 @@ void draw_fak(sf::RenderTarget& rt) {
   }
 }
 
-void on_move(sf::Event::MouseMoveEvent const& e) {
-  sf::Vector2f uj_pos(e.x, e.y);
+void set_selected(sf::Vector2i const& v, sf::RenderTarget& rt) {
+  sf::Vector2f uj_pos = rt.mapPixelToCoords(v);
+  selected = -1;
   for (int i = bigyok.size() - 1; i >= 0; --i) {
     if (i == moved) {
       bigyok[i]->move(uj_pos - eger_pos);
     }
-    if (bigyok[i]->getGlobalBounds().contains(e.x, e.y)) {
+    if (bigyok[i]->getGlobalBounds().contains(uj_pos)) {
       selected = i;
       break;
-    } else {
-      selected = -1;
     }
+    
   }
   eger_pos = uj_pos;
 }
 
-void on_button_pressed(sf::Event::MouseButtonEvent const& e) {
+
+void on_move(sf::Event::MouseMoveEvent const& e, sf::RenderTarget& rt) {
+  set_selected(sf::Vector2i{e.x, e.y}, rt);
+}
+
+void on_button_pressed(sf::Event::MouseButtonEvent const& e,
+                       sf::RenderTarget& rt) {
+  sf::Vector2f cs = rt.mapPixelToCoords(sf::Vector2i{e.x, e.y});
   if (selected == -1) {
     return;
   }
@@ -170,12 +182,12 @@ void on_button_pressed(sf::Event::MouseButtonEvent const& e) {
   selected = last;
   moved = selected;
 
-  eger_pos = sf::Vector2f(e.x, e.y);
+  eger_pos = cs;
 }
 
 void on_button_released() { moved = -1; }
 
-void on_key_down(sf::Event::KeyEvent const& e) {
+void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
   switch (e.code) {
     case sf::Keyboard::F: {
       sf::Vector2u m = fa_texture.getSize();
@@ -202,12 +214,14 @@ void on_key_down(sf::Event::KeyEvent const& e) {
           eger_pos - sf::Vector2f(m.x, m.y) * fa_scale * 0.5f, true));
       break;
     }
+    case sf::Keyboard::Delete: {
+      if (selected != -1) {
+        bigyok.erase(bigyok.begin() + selected);
+        selected = -1;
+      }
+      break;
+    }
   }
-}
-
-std::ostream& operator<<(std::ostream& os, sf::Vector2f const& v) {
-  os << "(" << v.x << ", " << v.y << ")";
-  return os;
 }
 
 void on_scroll(sf::Event::MouseWheelScrollEvent const& e,
@@ -216,6 +230,7 @@ void on_scroll(sf::Event::MouseWheelScrollEvent const& e,
   float height = v.getSize().y;
   v.move(0, height / 10.0f * e.delta * -1.0f);
   rt.setView(v);
+  set_selected(sf::Vector2i{e.x, e.y}, rt);
 }
 
 int main(int argc, char* argv[]) {
@@ -230,13 +245,13 @@ int main(int argc, char* argv[]) {
         window.close();
         break;
       } else if (event.type == sf::Event::MouseMoved) {
-        on_move(event.mouseMove);
+        on_move(event.mouseMove, window);
       } else if (event.type == sf::Event::MouseButtonPressed) {
-        on_button_pressed(event.mouseButton);
+        on_button_pressed(event.mouseButton, window);
       } else if (event.type == sf::Event::MouseButtonReleased) {
         on_button_released();
       } else if (event.type == sf::Event::KeyPressed) {
-        on_key_down(event.key);
+        on_key_down(event.key, window);
       } else if (event.type == sf::Event::MouseWheelScrolled) {
         on_scroll(event.mouseWheelScroll, window);
       }
