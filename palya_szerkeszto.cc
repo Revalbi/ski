@@ -13,6 +13,8 @@ const float fa_scale = 0.15;
 const float szikla_scale = 0.07;
 const float zaszlo_scale = 0.1f;
 const float zaszlo_tavolsag = 200.0f;
+const float v_h_lassu = 1.0f;
+const float v_h_gyors = 0.7f;
 
 sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
     zaszlo_texture_piros;
@@ -20,6 +22,9 @@ sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
 int selected = -1;
 int moved = -1;
 sf::Vector2f eger_pos;
+std::string file_nev;
+bool lassu = false;
+bool gyors = false;
 
 std::ostream& operator<<(std::ostream& os, sf::Vector2f const& v) {
   os << "(" << v.x << ", " << v.y << ")";
@@ -36,6 +41,7 @@ class Bigyo {
   virtual sf::FloatRect getGlobalBounds() const = 0;
   virtual void draw(sf::RenderTarget& rt) const = 0;
   virtual void move(const sf::Vector2f& offset) = 0;
+  virtual void kiir(std::ostream& os) = 0;
 };
 
 class Fa : public Bigyo {
@@ -49,6 +55,10 @@ class Fa : public Bigyo {
   sf::FloatRect getGlobalBounds() const { return s.getGlobalBounds(); }
   void draw(sf::RenderTarget& rt) const { rt.draw(s); }
   void move(const sf::Vector2f& offset) { s.move(offset); }
+  void kiir(std::ostream& os) {
+    sf::Vector2f p = s.getPosition();
+    os << "fa " << p.x << " " << p.y;
+  }
 
  private:
   sf::Sprite s;
@@ -65,6 +75,10 @@ class Szikla : public Bigyo {
   sf::FloatRect getGlobalBounds() const { return sz.getGlobalBounds(); }
   void draw(sf::RenderTarget& rt) const { rt.draw(sz); }
   void move(const sf::Vector2f& offset) { sz.move(offset); }
+  void kiir(std::ostream& os) {
+    sf::Vector2f p = sz.getPosition();
+    os << "szikla " << p.x << " " << p.y;
+  }
 
  private:
   sf::Sprite sz;
@@ -73,7 +87,8 @@ class Szikla : public Bigyo {
 class Zaszlok : public Bigyo {
  public:
   Zaszlok(float x, float y, bool kek)
-      : bal{kek ? zaszlo_texture_kek : zaszlo_texture_piros},
+      : kek{kek},
+        bal{kek ? zaszlo_texture_kek : zaszlo_texture_piros},
         jobb{kek ? zaszlo_texture_kek : zaszlo_texture_piros} {
     bal.setScale(zaszlo_scale, zaszlo_scale);
     jobb.setScale(zaszlo_scale, zaszlo_scale);
@@ -99,15 +114,21 @@ class Zaszlok : public Bigyo {
     bal.move(offset);
     jobb.move(offset);
   }
+  void kiir(std::ostream& os) {
+    sf::Vector2f p = bal.getPosition();
+    os << "zaszlo " << (kek ? "kek" : "piros") << " " << p.x << " " << p.y;
+  }
 
  private:
   sf::Sprite bal, jobb;
+  bool kek;
 };
 
 // 1280 x 720
 std::vector<Bigyo*> bigyok;
 
 void init(std::string fn) {
+  file_nev = fn;
   fa_texture.loadFromFile("fa2.png");
   szikla_texture.loadFromFile("szikla.png");
   zaszlo_texture_kek.loadFromFile("zaszlo_kek.png");
@@ -126,6 +147,10 @@ void init(std::string fn) {
       float x, y;
       is >> x >> y;
       bigyok.push_back(new Fa(x, y));
+    } else if (mi == "szikla") {
+      float x, y;
+      is >> x >> y;
+      bigyok.push_back(new Szikla(x, y));
     } else if (mi == "zaszlo") {
       float x, y;
       std::string szin;
@@ -161,11 +186,9 @@ void set_selected(sf::Vector2i const& v, sf::RenderTarget& rt) {
       selected = i;
       break;
     }
-    
   }
   eger_pos = uj_pos;
 }
-
 
 void on_move(sf::Event::MouseMoveEvent const& e, sf::RenderTarget& rt) {
   set_selected(sf::Vector2i{e.x, e.y}, rt);
@@ -187,6 +210,43 @@ void on_button_pressed(sf::Event::MouseButtonEvent const& e,
 
 void on_button_released() { moved = -1; }
 
+void kiment() {
+  std::ofstream of{file_nev};
+  for (Bigyo* b : bigyok) {
+    b->kiir(of);
+    of << std::endl;
+  }
+}
+
+void csikok(sf::RenderTarget& rt, float v, sf::Color szin) {
+  sf::Vector2u size = rt.getSize();
+  sf::Vector2f bf = rt.mapPixelToCoords(sf::Vector2i(0, 0));
+  sf::Vector2f jf = rt.mapPixelToCoords(sf::Vector2i(size.x, 0));
+  sf::Vector2f ba = rt.mapPixelToCoords(sf::Vector2i(0, size.y));
+  float d = v * (ba.y - bf.y);
+  sf::Vector2f s{bf.x - d, bf.y};
+  float dx = (jf.x - bf.x) / 20.0;
+  sf::VertexArray va{sf::Lines};
+  for (float x = s.x; x <= jf.x; x += dx) {
+    va.append(sf::Vertex{sf::Vector2f{x, bf.y}, szin});
+    va.append(sf::Vertex{sf::Vector2f{x + d, ba.y}, szin});
+  }
+  for (float x = jf.x + d; x >= bf.x; x -= dx) {
+    va.append(sf::Vertex{sf::Vector2f{x, bf.y}, szin});
+    va.append(sf::Vertex{sf::Vector2f{x - d, ba.y}, szin});
+  }
+  rt.draw(va);
+}
+
+void draw_csikok(sf::RenderTarget& rt) {
+  if (lassu) {
+    csikok(rt, v_h_lassu, sf::Color(219, 210, 26));
+  }
+  if (gyors) {
+    csikok(rt, v_h_gyors, sf::Color(250, 157, 157));
+  }
+}
+
 void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
   switch (e.code) {
     case sf::Keyboard::F: {
@@ -204,14 +264,18 @@ void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
 
     case sf::Keyboard::P: {
       sf::Vector2u m = zaszlo_texture_piros.getSize();
-      bigyok.push_back(new Zaszlok(
-          eger_pos - sf::Vector2f(m.x, m.y) * zaszlo_scale * 0.5f - sf::Vector2f{zaszlo_tavolsag * 0.5f, 0}, false));
+      bigyok.push_back(
+          new Zaszlok(eger_pos - sf::Vector2f(m.x, m.y) * zaszlo_scale * 0.5f -
+                          sf::Vector2f{zaszlo_tavolsag * 0.5f, 0},
+                      false));
       break;
     }
     case sf::Keyboard::K: {
       sf::Vector2u m = zaszlo_texture_kek.getSize();
-      bigyok.push_back(new Zaszlok(
-          eger_pos - sf::Vector2f(m.x, m.y) * zaszlo_scale * 0.5f - sf::Vector2f{zaszlo_tavolsag * 0.5f, 0}, true));
+      bigyok.push_back(
+          new Zaszlok(eger_pos - sf::Vector2f(m.x, m.y) * zaszlo_scale * 0.5f -
+                          sf::Vector2f{zaszlo_tavolsag * 0.5f, 0},
+                      true));
       break;
     }
     case sf::Keyboard::Delete: {
@@ -221,6 +285,15 @@ void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
       }
       break;
     }
+    case sf::Keyboard::M:
+      kiment();
+      break;
+    case sf::Keyboard::G:
+      gyors = !gyors;
+      break;
+    case sf::Keyboard::L:
+      lassu = !lassu;
+      break;
   }
 }
 
@@ -257,6 +330,7 @@ int main(int argc, char* argv[]) {
       }
     }
     window.clear(sf::Color::White);
+    draw_csikok(window);
     draw_fak(window);
     window.display();
   }
