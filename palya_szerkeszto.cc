@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 const float v_le = 50;  // pixels per second
@@ -19,12 +20,17 @@ const float v_h_gyors = 0.7f;
 sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
     zaszlo_texture_piros;
 
-int selected = -1;
+std::unordered_set<int> selected;
+int primary_selected = -1;
 int moved = -1;
 sf::Vector2f eger_pos;
 std::string file_nev;
 bool lassu = false;
 bool gyors = false;
+bool bulk_select_mode = false;
+
+class Bigyo;
+std::vector<Bigyo*> bigyok;
 
 std::ostream& operator<<(std::ostream& os, sf::Vector2f const& v) {
   os << "(" << v.x << ", " << v.y << ")";
@@ -42,6 +48,7 @@ class Bigyo {
   virtual void draw(sf::RenderTarget& rt) const = 0;
   virtual void move(const sf::Vector2f& offset) = 0;
   virtual void kiir(std::ostream& os) = 0;
+  virtual float top() = 0;
 };
 
 class Fa : public Bigyo {
@@ -59,6 +66,7 @@ class Fa : public Bigyo {
     sf::Vector2f p = s.getPosition();
     os << "fa " << p.x << " " << p.y;
   }
+  float top() { return s.getGlobalBounds().top; }
 
  private:
   sf::Sprite s;
@@ -79,6 +87,7 @@ class Szikla : public Bigyo {
     sf::Vector2f p = sz.getPosition();
     os << "szikla " << p.x << " " << p.y;
   }
+  float top() { return sz.getGlobalBounds().top; }
 
  private:
   sf::Sprite sz;
@@ -118,6 +127,7 @@ class Zaszlok : public Bigyo {
     sf::Vector2f p = bal.getPosition();
     os << "zaszlo " << (kek ? "kek" : "piros") << " " << p.x << " " << p.y;
   }
+  float top() { return bal.getGlobalBounds().top; }
 
  private:
   sf::Sprite bal, jobb;
@@ -125,7 +135,6 @@ class Zaszlok : public Bigyo {
 };
 
 // 1280 x 720
-std::vector<Bigyo*> bigyok;
 
 void init(std::string fn) {
   file_nev = fn;
@@ -163,7 +172,7 @@ void init(std::string fn) {
 void draw_fak(sf::RenderTarget& rt) {
   for (int i = 0; i < bigyok.size(); ++i) {
     Bigyo* s = bigyok[i];
-    if (i == selected) {
+    if (selected.count(i)) {
       sf::RectangleShape rectangle;
       auto gb = s->getGlobalBounds();
       rectangle.setSize(sf::Vector2f(gb.width, gb.height));
@@ -175,35 +184,69 @@ void draw_fak(sf::RenderTarget& rt) {
   }
 }
 
+void set_selected_wc(sf::Vector2f const& uj_pos, sf::RenderTarget& rt) {
+  selected.clear();
+  primary_selected = -1;
+  for (int i = bigyok.size() - 1; i >= 0; --i) {
+    if (bigyok[i]->getGlobalBounds().contains(uj_pos)) {
+      selected.insert(i);
+      primary_selected = i;
+      break;
+    }
+  }
+  if (primary_selected == -1) {
+    eger_pos = uj_pos;
+    return;
+  }
+  if (bulk_select_mode) {
+    float t = bigyok[primary_selected]->top();
+    for (int i = 0; i < bigyok.size(); ++i) {
+      if (bigyok[i]->top() >= t) {
+        selected.insert(i);
+      }
+    }
+  }
+
+  eger_pos = uj_pos;
+}
+
 void set_selected(sf::Vector2i const& v, sf::RenderTarget& rt) {
   sf::Vector2f uj_pos = rt.mapPixelToCoords(v);
-  selected = -1;
+  set_selected_wc(uj_pos, rt);
+}
+
+void on_move(sf::Event::MouseMoveEvent const& e, sf::RenderTarget& rt) {
+  sf::Vector2i v = sf::Vector2i{e.x, e.y};
+  if (moved == -1) {
+    set_selected(v, rt);
+    return;
+  }
+  sf::Vector2f uj_pos = rt.mapPixelToCoords(v);
   for (int i = bigyok.size() - 1; i >= 0; --i) {
-    if (i == moved) {
+    if (selected.count(i)) {
       bigyok[i]->move(uj_pos - eger_pos);
-    }
-    if (bigyok[i]->getGlobalBounds().contains(uj_pos)) {
-      selected = i;
-      break;
     }
   }
   eger_pos = uj_pos;
 }
 
-void on_move(sf::Event::MouseMoveEvent const& e, sf::RenderTarget& rt) {
-  set_selected(sf::Vector2i{e.x, e.y}, rt);
-}
-
 void on_button_pressed(sf::Event::MouseButtonEvent const& e,
                        sf::RenderTarget& rt) {
   sf::Vector2f cs = rt.mapPixelToCoords(sf::Vector2i{e.x, e.y});
-  if (selected == -1) {
+  if (primary_selected == -1) {
     return;
   }
   int last = bigyok.size() - 1;
-  std::swap(bigyok[selected], bigyok[last]);
-  selected = last;
-  moved = selected;
+  bool is_last_selected = selected.count(last);
+  selected.insert(last);
+  if (is_last_selected) {
+    selected.insert(primary_selected);
+  } else {
+    selected.erase(primary_selected);
+  }
+  std::swap(bigyok[primary_selected], bigyok[last]);
+  primary_selected = last;
+  moved = primary_selected;
 
   eger_pos = cs;
 }
@@ -279,9 +322,10 @@ void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
       break;
     }
     case sf::Keyboard::Delete: {
-      if (selected != -1) {
-        bigyok.erase(bigyok.begin() + selected);
-        selected = -1;
+      if (primary_selected != -1) {
+        bigyok.erase(bigyok.begin() + primary_selected);
+        primary_selected = -1;
+        selected.clear();
       }
       break;
     }
@@ -294,6 +338,21 @@ void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
     case sf::Keyboard::L:
       lassu = !lassu;
       break;
+    case sf::Keyboard::LShift: {
+      bulk_select_mode = true;
+      set_selected_wc(eger_pos, rt);
+      break;
+    }
+  }
+}
+
+void on_key_up(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
+  switch (e.code) {
+    case sf::Keyboard::LShift:
+      bulk_select_mode = false;
+      set_selected_wc(eger_pos, rt);
+
+      break;
   }
 }
 
@@ -303,7 +362,7 @@ void on_scroll(sf::Event::MouseWheelScrollEvent const& e,
   float height = v.getSize().y;
   v.move(0, height / 10.0f * e.delta * -1.0f);
   rt.setView(v);
-  set_selected(sf::Vector2i{e.x, e.y}, rt);
+  on_move(sf::Event::MouseMoveEvent{e.x, e.y}, rt);
 }
 
 int main(int argc, char* argv[]) {
@@ -325,6 +384,8 @@ int main(int argc, char* argv[]) {
         on_button_released();
       } else if (event.type == sf::Event::KeyPressed) {
         on_key_down(event.key, window);
+      } else if (event.type == sf::Event::KeyReleased) {
+        on_key_up(event.key, window);
       } else if (event.type == sf::Event::MouseWheelScrolled) {
         on_scroll(event.mouseWheelScroll, window);
       }
