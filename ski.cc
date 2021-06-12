@@ -19,6 +19,8 @@ const float v_h_lassu = 1.0f;
 const float v_h_gyors = 0.7f;
 const float sielo_scale = 0.25f;
 
+// proba
+
 sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
     zaszlo_texture_piros, siel_texture_balra, siel_texture_jobbra,
     siel_texture_egyenesen;
