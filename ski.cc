@@ -10,8 +10,6 @@
 #include <vector>
 #include <cstdint>
 
-// proba
-
 const float v_le = 50;  // pixels per second
 const float fa_scale = 0.15;
 const float szikla_scale = 0.07;
