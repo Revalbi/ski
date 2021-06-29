@@ -2,13 +2,13 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <cstdint>
 
 const float v_le = 50;  // pixels per second
 const float fa_scale = 0.15;
@@ -160,8 +160,15 @@ void init(std::string fn) {
   egyenes_sprite.setScale(sielo_scale, sielo_scale);
 
   bal_sprite.setPosition(640 - bal_sprite.getGlobalBounds().width / 2.0f, 100);
-  jobb_sprite.setPosition(640 - jobb_sprite.getGlobalBounds().width / 2.0f, 100);
-  egyenes_sprite.setPosition(640 - egyenes_sprite.getGlobalBounds().width / 2.0f, 100);
+  jobb_sprite.setPosition(640 - jobb_sprite.getGlobalBounds().width / 2.0f,
+                          100);
+  egyenes_sprite.setPosition(
+      640 - egyenes_sprite.getGlobalBounds().width / 2.0f, 100);
+
+  // jobb_sprite.move(egyenes_sprite.getPosition().x +
+  //                     jobb_sprite.getGlobalBounds().width -
+  //                     egyenes_sprite.getGlobalBounds().width,
+  //                 0);
 
   std::ifstream input{fn};
 
@@ -189,6 +196,20 @@ void init(std::string fn) {
   }
 }
 
+const float sielo_hitbox_sfx = 0.45f;
+const float sielo_hitbox_sfy_top = 0.5f;
+const float sielo_hitbox_sfy_bottom = 0.4f;
+
+sf::FloatRect compute_sielo_hitbox(sf::FloatRect const& br) {
+  sf::FloatRect res;
+  res.left = br.width * sielo_hitbox_sfx + br.left;
+  res.width = br.width - 2.0f * br.width * sielo_hitbox_sfx;
+  res.top = br.height * sielo_hitbox_sfy_top + br.top;
+  res.height =
+      br.height - br.height * (sielo_hitbox_sfy_top + sielo_hitbox_sfy_bottom);
+  return res;
+}
+
 void draw_fak(sf::RenderTarget& rt) {
   for (int i = 0; i < bigyok.size(); ++i) {
     Bigyo* s = bigyok[i];
@@ -197,31 +218,41 @@ void draw_fak(sf::RenderTarget& rt) {
 }
 
 void draw_sielo(sf::RenderTarget& rt) {
+  sf::FloatRect br;
   if (jobbra == true) {
     rt.draw(jobb_sprite);
+    br = jobb_sprite.getGlobalBounds();
   } else if (balra == true) {
     rt.draw(bal_sprite);
+    br = bal_sprite.getGlobalBounds();
   } else {
     rt.draw(egyenes_sprite);
+    br = egyenes_sprite.getGlobalBounds();
   }
+  const sf::FloatRect hb = compute_sielo_hitbox(br);
+  sf::RectangleShape rectangle;
+  rectangle.setSize(sf::Vector2f{hb.width, hb.height});
+  rectangle.setOutlineColor(sf::Color::Yellow);
+  rectangle.setFillColor(sf::Color{0,0,0,0});
+  rectangle.setOutlineThickness(5);
+  rectangle.setPosition(hb.left, hb.top);
+  rt.draw(rectangle);
 }
 
-void sielo_move (bool jobbra, bool balra, std::int64_t fus) {
-   if (balra == true) { 
+void sielo_move(bool jobbra, bool balra, std::int64_t fus) {
+  if (balra == true) {
     bal_sprite.setPosition(jobb_sprite.getPosition());
     bal_sprite.move(sf::Vector2f{-2.5f * fus / 16000.0f, 0.0f});
     jobb_sprite.setPosition(bal_sprite.getPosition());
-   } else if (jobbra == true) {
-      bal_sprite.setPosition(jobb_sprite.getPosition());
-      bal_sprite.move(sf::Vector2f{2.5f * fus / 16000.0f, 0.0f});
-      jobb_sprite.setPosition(bal_sprite.getPosition());
-
-   }
-         egyenes_sprite.setPosition(bal_sprite.getPosition());
-
+  } else if (jobbra == true) {
+    bal_sprite.setPosition(jobb_sprite.getPosition());
+    bal_sprite.move(sf::Vector2f{2.5f * fus / 16000.0f, 0.0f});
+    jobb_sprite.setPosition(bal_sprite.getPosition());
+  }
+  egyenes_sprite.setPosition(bal_sprite.getPosition());
 }
 
-void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt, std::int64_t fus) {
+void on_key_down(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
   switch (e.code) {
     case sf::Keyboard::Left: {
       balra = true;
@@ -257,9 +288,15 @@ void on_key_up(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
   }
 }
 
-void move(std::int64_t fus) {
-  for (int i = 0; i < bigyok.size(); ++i) {
-    bigyok[i]->move(sf::Vector2f{0.0f, -5.0f * fus / 16000.0f});
+void move(std::int64_t fus, bool turbo) {
+  if (turbo == false) {
+    for (int i = 0; i < bigyok.size(); ++i) {
+      bigyok[i]->move(sf::Vector2f{0.0f, -5.0f * fus / 16000.0f});
+    }
+  } else if (turbo == true) {
+    for (int i = 0; i < bigyok.size(); ++i) {
+      bigyok[i]->move(sf::Vector2f{0.0f, -8.0f * fus / 16000.0f});
+    }
   }
 }
 
@@ -277,16 +314,16 @@ int main(int argc, char* argv[]) {
         window.close();
         break;
       } else if (event.type == sf::Event::KeyPressed) {
-        on_key_down(event.key, window, fus);
+        on_key_down(event.key, window);
       } else if (event.type == sf::Event::KeyReleased) {
         on_key_up(event.key, window);
       }
     }
-    move(fus);
+    move(fus, turbo);
     sielo_move(jobbra, balra, fus);
     window.clear(sf::Color::White);
     draw_sielo(window);
-    draw_fak(window);    
+    draw_fak(window);
     window.display();
   }
 }
