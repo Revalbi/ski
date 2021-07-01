@@ -210,10 +210,35 @@ sf::FloatRect compute_sielo_hitbox(sf::FloatRect const& br) {
   return res;
 }
 
+const float fak_hitbox_sfx = 0.45f;
+const float fak_hitbox_sfy_top = 0.8f;
+const float fak_hitbox_sfy_bottom = 0.1f;
+
+sf::FloatRect compute_fak_hitbox(sf::FloatRect const& fak_Global_bounds) {
+  sf::FloatRect res_fak;
+  res_fak.left = fak_Global_bounds.width * fak_hitbox_sfx + fak_Global_bounds.left;
+  res_fak.width = fak_Global_bounds.width - 2.0f * fak_Global_bounds.width * fak_hitbox_sfx;
+  res_fak.top = fak_Global_bounds.height * fak_hitbox_sfy_top + fak_Global_bounds.top;
+  res_fak.height =
+      fak_Global_bounds.height - fak_Global_bounds.height * (fak_hitbox_sfy_top + fak_hitbox_sfy_bottom);
+  return res_fak;
+}
+
 void draw_fak(sf::RenderTarget& rt) {
+  sf::FloatRect fak_Global_bounds;
   for (int i = 0; i < bigyok.size(); ++i) {
     Bigyo* s = bigyok[i];
     s->draw(rt);
+    // if (bigyok[i] == Fa) {}
+    fak_Global_bounds = bigyok[i]->getGlobalBounds();
+    const sf::FloatRect hb_2 = compute_fak_hitbox(fak_Global_bounds);
+    sf::RectangleShape rectangle;
+    rectangle.setSize(sf::Vector2f{hb_2.width, hb_2.height});
+    rectangle.setOutlineColor(sf::Color::Yellow);
+    rectangle.setFillColor(sf::Color{0,0,0,0});
+    rectangle.setOutlineThickness(5);
+    rectangle.setPosition(hb_2.left, hb_2.top);
+    rt.draw(rectangle);
   }
 }
 
