@@ -1,3 +1,4 @@
+
 fa 27 174
 zaszlo kek 157 9988
 fa 990 230
@@ -111,3 +112,4 @@ szikla 762 1356
 szikla 343 1398
 szikla 805 1789
 szikla 386 1826
+cel 0 10000

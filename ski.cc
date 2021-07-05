@@ -19,6 +19,7 @@ const float v_h_lassu = 1.0f;
 const float v_h_gyors = 0.7f;
 const float sielo_scale = 0.25f;
 const std::uint64_t kemeny_buntetes = 5 * 1000000ll;
+const float cel_scale = 1.2f;
 
 enum class HitEvent { NONE, ZASZLO, KEMENY };
 
@@ -26,7 +27,7 @@ enum class HitEvent { NONE, ZASZLO, KEMENY };
 
 sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
     zaszlo_texture_piros, siel_texture_balra, siel_texture_jobbra,
-    siel_texture_egyenesen;
+    siel_texture_egyenesen, cel_texture;
 
 sf::Sprite bal_sprite, jobb_sprite, egyenes_sprite;
 
@@ -189,6 +190,42 @@ class Szikla : public Bigyo {
   sf::Sprite sz;
 };
 
+class CelVonal : public Bigyo {
+ public:
+  CelVonal(float x, float y) : c{cel_texture} {
+    c.setScale(cel_scale, cel_scale);
+    c.setPosition(x, y);
+  }
+  CelVonal(sf::Vector2f const& v) : CelVonal(v.x, v.y) {}
+  void setPosition(float x, float y) { c.setPosition(x, y); }
+  sf::FloatRect getGlobalBounds() const { return c.getGlobalBounds(); }
+  void draw(sf::RenderTarget& rt) const {
+    rt.draw(c);
+    //    if (draw_hitbox) {
+    //      sf::FloatRect fak_global_bounds = getGlobalBounds();
+    //      const sf::FloatRect hb_2 = compute_fak_hitbox(fak_global_bounds);
+    //      sf::RectangleShape rectangle;
+    //      rectangle.setSize(sf::Vector2f{hb_2.width, hb_2.height});
+    //      rectangle.setOutlineColor(sf::Color::Yellow);
+    //      rectangle.setFillColor(sf::Color{0, 0, 0, 0});
+    //      rectangle.setOutlineThickness(5);
+    //      rectangle.setPosition(hb_2.left, hb_2.top);
+    //      rt.draw(rectangle);
+    //    }
+  }
+  void move(const sf::Vector2f& offset) { c.move(offset); }
+  void kiir(std::ostream& os) {
+    sf::Vector2f p = c.getPosition();
+    os << "cel " << p.x << " " << p.y;
+  }
+  float top() { return c.getGlobalBounds().top; }
+
+  sf::FloatRect hitbox() const { return sf::FloatRect{}; }
+
+ private:
+  sf::Sprite c;
+};
+
 class Zaszlok : public Bigyo {
  public:
   Zaszlok(float x, float y, bool kek)
@@ -246,6 +283,7 @@ void init(std::string fn) {
   siel_texture_balra.loadFromFile("skiel_balra2.png");
   siel_texture_jobbra.loadFromFile("skiel_jobbra2.png");
   siel_texture_egyenesen.loadFromFile("skiel_egyenes2.png");
+  cel_texture.loadFromFile("cel_terv.png");
 
   bal_sprite.setTexture(siel_texture_balra);
   jobb_sprite.setTexture(siel_texture_jobbra);
@@ -283,6 +321,11 @@ void init(std::string fn) {
       float x, y;
       is >> x >> y;
       bigyok.push_back(new Szikla(x, y));
+    } else if (mi == "cel") {
+      float x, y;
+      is >> x >> y;
+      bigyok.push_back(new CelVonal(x, y));
+
     } else if (mi == "zaszlo") {
       float x, y;
       std::string szin;
