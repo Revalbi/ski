@@ -18,6 +18,9 @@ const float zaszlo_tavolsag = 200.0f;
 const float v_h_lassu = 1.0f;
 const float v_h_gyors = 0.7f;
 const float sielo_scale = 0.25f;
+const std::uint64_t kemeny_buntetes = 5 * 1000000ll;
+
+enum class HitEvent { NONE, ZASZLO, KEMENY };
 
 // proba
 
@@ -27,12 +30,18 @@ sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
 
 sf::Sprite bal_sprite, jobb_sprite, egyenes_sprite;
 
+sf::Font font;
+
 int moved = -1;
 sf::Vector2f eger_pos;
 std::string file_nev;
 bool turbo = false;
 bool jobbra = false;
 bool balra = false;
+bool fut = true;
+bool draw_hitbox = false;
+std::uint64_t added_time = 0;
+std::uint64_t score_ido = 0;
 
 class Bigyo;
 std::vector<Bigyo*> bigyok;
@@ -46,6 +55,43 @@ struct hely {
   float x, y;
 };
 
+const float fak_hitbox_sfx = 0.45f;
+const float fak_hitbox_sfy_top = 0.8f;
+const float fak_hitbox_sfy_bottom = 0.07f;
+
+sf::FloatRect compute_fak_hitbox(sf::FloatRect const& fak_Global_bounds) {
+  sf::FloatRect res_fak;
+  res_fak.left =
+      fak_Global_bounds.width * fak_hitbox_sfx + fak_Global_bounds.left;
+  res_fak.width =
+      fak_Global_bounds.width - 2.0f * fak_Global_bounds.width * fak_hitbox_sfx;
+  res_fak.top =
+      fak_Global_bounds.height * fak_hitbox_sfy_top + fak_Global_bounds.top;
+  res_fak.height =
+      fak_Global_bounds.height -
+      fak_Global_bounds.height * (fak_hitbox_sfy_top + fak_hitbox_sfy_bottom);
+  return res_fak;
+}
+
+const float sziklak_hitbox_sfx = 0.7f;
+const float sziklak_hitbox_sfy_top = 0.3f;
+const float sziklak_hitbox_sfy_bottom = 0.3f;
+
+sf::FloatRect compute_sziklak_hitbox(
+    sf::FloatRect const& sziklak_Global_bounds) {
+  sf::FloatRect res_sziklak;
+  res_sziklak.left = sziklak_Global_bounds.width * sziklak_hitbox_sfx +
+                     sziklak_Global_bounds.left;
+  res_sziklak.width = sziklak_Global_bounds.width -
+                      2.0f * sziklak_Global_bounds.width * sziklak_hitbox_sfx;
+  res_sziklak.top = sziklak_Global_bounds.height * sziklak_hitbox_sfy_top +
+                    sziklak_Global_bounds.top;
+  res_sziklak.height = sziklak_Global_bounds.height -
+                       sziklak_Global_bounds.height *
+                           (sziklak_hitbox_sfy_top + sziklak_hitbox_sfy_bottom);
+  return res_sziklak;
+}
+
 class Bigyo {
  public:
   virtual void setPosition(float x, float y) = 0;
@@ -54,6 +100,16 @@ class Bigyo {
   virtual void move(const sf::Vector2f& offset) = 0;
   virtual void kiir(std::ostream& os) = 0;
   virtual float top() = 0;
+  virtual HitEvent utkozes_vizsgalat(sf::FloatRect const& other) const {
+    if (hitbox().intersects(other)) {
+      return utkozes_tipus;
+    }
+    return HitEvent::NONE;
+  }
+
+ protected:
+  HitEvent utkozes_tipus = HitEvent::KEMENY;
+  virtual sf::FloatRect hitbox() const = 0;
 };
 
 class Fa : public Bigyo {
@@ -65,13 +121,31 @@ class Fa : public Bigyo {
   Fa(sf::Vector2f const& v) : Fa(v.x, v.y) {}
   void setPosition(float x, float y) { s.setPosition(x, y); }
   sf::FloatRect getGlobalBounds() const { return s.getGlobalBounds(); }
-  void draw(sf::RenderTarget& rt) const { rt.draw(s); }
+  void draw(sf::RenderTarget& rt) const {
+    rt.draw(s);
+    if (draw_hitbox) {
+      sf::FloatRect fak_global_bounds = getGlobalBounds();
+      const sf::FloatRect hb_2 = compute_fak_hitbox(fak_global_bounds);
+      sf::RectangleShape rectangle;
+      rectangle.setSize(sf::Vector2f{hb_2.width, hb_2.height});
+      rectangle.setOutlineColor(sf::Color::Yellow);
+      rectangle.setFillColor(sf::Color{0, 0, 0, 0});
+      rectangle.setOutlineThickness(5);
+      rectangle.setPosition(hb_2.left, hb_2.top);
+      rt.draw(rectangle);
+    }
+  }
   void move(const sf::Vector2f& offset) { s.move(offset); }
   void kiir(std::ostream& os) {
     sf::Vector2f p = s.getPosition();
     os << "fa " << p.x << " " << p.y;
   }
   float top() { return s.getGlobalBounds().top; }
+
+  sf::FloatRect hitbox() const {
+    sf::FloatRect fak_global_bounds = getGlobalBounds();
+    return compute_fak_hitbox(fak_global_bounds);
+  }
 
  private:
   sf::Sprite s;
@@ -86,13 +160,30 @@ class Szikla : public Bigyo {
   Szikla(sf::Vector2f const& v) : Szikla(v.x, v.y) {}
   void setPosition(float x, float y) { sz.setPosition(x, y); }
   sf::FloatRect getGlobalBounds() const { return sz.getGlobalBounds(); }
-  void draw(sf::RenderTarget& rt) const { rt.draw(sz); }
+  void draw(sf::RenderTarget& rt) const {
+    rt.draw(sz);
+    if (draw_hitbox) {
+      sf::FloatRect sziklak_global_bounds = getGlobalBounds();
+      const sf::FloatRect hb_3 = compute_sziklak_hitbox(sziklak_global_bounds);
+      sf::RectangleShape rectangle;
+      rectangle.setSize(sf::Vector2f{hb_3.width, hb_3.height});
+      rectangle.setOutlineColor(sf::Color::Yellow);
+      rectangle.setFillColor(sf::Color{0, 0, 0, 0});
+      rectangle.setOutlineThickness(5);
+      rectangle.setPosition(hb_3.left, hb_3.top);
+      rt.draw(rectangle);
+    }
+  }
   void move(const sf::Vector2f& offset) { sz.move(offset); }
   void kiir(std::ostream& os) {
     sf::Vector2f p = sz.getPosition();
     os << "szikla " << p.x << " " << p.y;
   }
   float top() { return sz.getGlobalBounds().top; }
+  sf::FloatRect hitbox() const override {
+    sf::FloatRect sziklak_global_bounds = getGlobalBounds();
+    return compute_sziklak_hitbox(sziklak_global_bounds);
+  }
 
  private:
   sf::Sprite sz;
@@ -133,6 +224,10 @@ class Zaszlok : public Bigyo {
     os << "zaszlo " << (kek ? "kek" : "piros") << " " << p.x << " " << p.y;
   }
   float top() { return bal.getGlobalBounds().top; }
+  HitEvent utkozes_vizsgalat(sf::FloatRect const& other) {
+    return HitEvent::NONE;
+  }
+  sf::FloatRect hitbox() const override { return sf::FloatRect{}; }
 
  private:
   sf::Sprite bal, jobb;
@@ -143,6 +238,7 @@ class Zaszlok : public Bigyo {
 
 void init(std::string fn) {
   file_nev = fn;
+  font.loadFromFile("font1.ttf");
   fa_texture.loadFromFile("fa2.png");
   szikla_texture.loadFromFile("szikla.png");
   zaszlo_texture_kek.loadFromFile("zaszlo_kek.png");
@@ -210,58 +306,44 @@ sf::FloatRect compute_sielo_hitbox(sf::FloatRect const& br) {
   return res;
 }
 
-const float fak_hitbox_sfx = 0.45f;
-const float fak_hitbox_sfy_top = 0.8f;
-const float fak_hitbox_sfy_bottom = 0.1f;
-
-sf::FloatRect compute_fak_hitbox(sf::FloatRect const& fak_Global_bounds) {
-  sf::FloatRect res_fak;
-  res_fak.left = fak_Global_bounds.width * fak_hitbox_sfx + fak_Global_bounds.left;
-  res_fak.width = fak_Global_bounds.width - 2.0f * fak_Global_bounds.width * fak_hitbox_sfx;
-  res_fak.top = fak_Global_bounds.height * fak_hitbox_sfy_top + fak_Global_bounds.top;
-  res_fak.height =
-      fak_Global_bounds.height - fak_Global_bounds.height * (fak_hitbox_sfy_top + fak_hitbox_sfy_bottom);
-  return res_fak;
-}
-
 void draw_fak(sf::RenderTarget& rt) {
-  sf::FloatRect fak_Global_bounds;
   for (int i = 0; i < bigyok.size(); ++i) {
     Bigyo* s = bigyok[i];
     s->draw(rt);
-    // if (bigyok[i] == Fa) {}
-    fak_Global_bounds = bigyok[i]->getGlobalBounds();
-    const sf::FloatRect hb_2 = compute_fak_hitbox(fak_Global_bounds);
-    sf::RectangleShape rectangle;
-    rectangle.setSize(sf::Vector2f{hb_2.width, hb_2.height});
-    rectangle.setOutlineColor(sf::Color::Yellow);
-    rectangle.setFillColor(sf::Color{0,0,0,0});
-    rectangle.setOutlineThickness(5);
-    rectangle.setPosition(hb_2.left, hb_2.top);
-    rt.draw(rectangle);
   }
 }
 
-void draw_sielo(sf::RenderTarget& rt) {
+sf::FloatRect sielo_hitbox() {
   sf::FloatRect br;
   if (jobbra == true) {
-    rt.draw(jobb_sprite);
     br = jobb_sprite.getGlobalBounds();
   } else if (balra == true) {
-    rt.draw(bal_sprite);
     br = bal_sprite.getGlobalBounds();
   } else {
-    rt.draw(egyenes_sprite);
     br = egyenes_sprite.getGlobalBounds();
   }
   const sf::FloatRect hb = compute_sielo_hitbox(br);
-  sf::RectangleShape rectangle;
-  rectangle.setSize(sf::Vector2f{hb.width, hb.height});
-  rectangle.setOutlineColor(sf::Color::Yellow);
-  rectangle.setFillColor(sf::Color{0,0,0,0});
-  rectangle.setOutlineThickness(5);
-  rectangle.setPosition(hb.left, hb.top);
-  rt.draw(rectangle);
+  return hb;
+}
+
+void draw_sielo(sf::RenderTarget& rt) {
+  if (jobbra == true) {
+    rt.draw(jobb_sprite);
+  } else if (balra == true) {
+    rt.draw(bal_sprite);
+  } else {
+    rt.draw(egyenes_sprite);
+  }
+  if (draw_hitbox) {
+    const sf::FloatRect hb = sielo_hitbox();
+    sf::RectangleShape rectangle;
+    rectangle.setSize(sf::Vector2f{hb.width, hb.height});
+    rectangle.setOutlineColor(sf::Color::Yellow);
+    rectangle.setFillColor(sf::Color{0, 0, 0, 0});
+    rectangle.setOutlineThickness(5);
+    rectangle.setPosition(hb.left, hb.top);
+    rt.draw(rectangle);
+  }
 }
 
 void sielo_move(bool jobbra, bool balra, std::int64_t fus) {
@@ -325,30 +407,88 @@ void move(std::int64_t fus, bool turbo) {
   }
 }
 
+void advance_score(std::int64_t fus, bool turbo) {
+  if (turbo == false) {
+    score_ido = score_ido + fus;
+  } else if (turbo == true) {
+    score_ido = score_ido + fus * 5;
+  }
+}
+
+HitEvent sielo_utkozes() {
+  sf::FloatRect br = sielo_hitbox();
+  for (int i = 0; i < bigyok.size(); ++i) {
+    HitEvent e = bigyok[i]->utkozes_vizsgalat(br);
+    if (e != HitEvent::NONE) {
+      return e;
+    }
+  }
+  return HitEvent::NONE;
+}
+
+void draw_time_and_score(sf::RenderTarget& rt, std::uint64_t kor_ido_us,
+                         std::uint64_t score_ido) {
+  std::uint64_t ido = (kor_ido_us + added_time) / 10000;
+  std::uint64_t secs = ido / 100;
+  std::uint64_t frac = ido - secs * 100;
+  std::ostringstream os;
+  os << "time: " << secs << ":" << (frac < 10 ? "0" : "") << frac;
+  sf::Text text(os.str(), font);
+  text.setCharacterSize(60);
+  text.setStyle(sf::Text::Bold);
+  text.setFillColor(sf::Color::Blue);
+  text.setPosition(1020, 80);
+  rt.draw(text);
+  ido = score_ido / 10000;
+  secs = ido / 100;
+  os;
+  std::ostringstream os2;
+  os2 << "score: " << secs * 10;
+  sf::Text text2(os2.str(), font);
+  text2.setCharacterSize(60);
+  text2.setStyle(sf::Text::Bold);
+  text2.setFillColor(sf::Color::Red);
+  text2.setPosition(1020, 200);
+  rt.draw(text2);
+}
+
 int main(int argc, char* argv[]) {
   init(argv[1]);
   sf::RenderWindow window(sf::VideoMode(1280, 720), "ski");
   window.setFramerateLimit(60);
   sf::Event event;
   sf::Clock c;
+  sf::Clock kor_clock;
+  std::uint64_t kor_ido_us = 0;
   while (true) {
     std::int64_t fus = c.restart().asMicroseconds();
-    if (window.pollEvent(event)) {
+    while (window.pollEvent(event)) {
       // "close requested" event: we close the window
       if (event.type == sf::Event::Closed) {
         window.close();
-        break;
+        return 0;
       } else if (event.type == sf::Event::KeyPressed) {
         on_key_down(event.key, window);
       } else if (event.type == sf::Event::KeyReleased) {
         on_key_up(event.key, window);
       }
     }
-    move(fus, turbo);
-    sielo_move(jobbra, balra, fus);
+    if (fut) {
+      switch (sielo_utkozes()) {
+        case HitEvent::KEMENY:
+          added_time = added_time + kemeny_buntetes;
+          fut = false;
+          break;
+      }
+      move(fus, turbo);
+      advance_score(fus, turbo);
+      sielo_move(jobbra, balra, fus);
+      kor_ido_us = kor_clock.getElapsedTime().asMicroseconds();
+    }
     window.clear(sf::Color::White);
     draw_sielo(window);
     draw_fak(window);
+    draw_time_and_score(window, kor_ido_us, score_ido);
     window.display();
   }
 }

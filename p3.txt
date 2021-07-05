@@ -1,18 +1,18 @@
-fa 164 89
-fa 392 89
-fa 751 101
+fa 27 174
+zaszlo kek 157 9988
+fa 990 230
 fa 929 96
-fa 97 325
-fa 727 445
+fa -31 49
+fa 1055 491
 fa 984 388
-fa 458 453
-fa 151 740
-fa 439 776
-fa 808 761
+fa -178 365
+fa 71 943
+szikla 545 613
+fa 66 727
 fa 1010 736
 fa 190 1169
-fa 473 1168
-fa 701 1140
+szikla 264 1007
+fa 78 1287
 fa 877 1136
 fa 188 1577
 fa 457 1572
@@ -95,4 +95,19 @@ zaszlo piros 669 9571
 zaszlo kek 423 9984
 zaszlo kek 632 9996
 zaszlo kek 916 9997
-zaszlo kek 157 9988
+fa 1040 70
+szikla 286 391
+szikla 694 202
+szikla 335 182
+szikla 185 597
+szikla 734 446
+szikla 857 605
+szikla 771 345
+fa 1047 909
+szikla 852 870
+szikla 620 1071
+fa 1005 1320
+szikla 762 1356
+szikla 343 1398
+szikla 805 1789
+szikla 386 1826
