@@ -283,7 +283,7 @@ void init(std::string fn) {
   siel_texture_balra.loadFromFile("skiel_balra2.png");
   siel_texture_jobbra.loadFromFile("skiel_jobbra2.png");
   siel_texture_egyenesen.loadFromFile("skiel_egyenes2.png");
-  cel_texture.loadFromFile("cel_terv.png");
+  cel_texture.loadFromFile("cel2.png");
 
   bal_sprite.setTexture(siel_texture_balra);
   jobb_sprite.setTexture(siel_texture_jobbra);
