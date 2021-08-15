@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <limits>
 
 const float v_le = 50;  // pixels per second
 const float fa_scale = 0.15;
@@ -27,7 +28,7 @@ enum class HitEvent { NONE, ZASZLO, KEMENY };
 
 sf::Texture fa_texture, szikla_texture, zaszlo_texture_kek,
     zaszlo_texture_piros, siel_texture_balra, siel_texture_jobbra,
-    siel_texture_egyenesen, cel_texture;
+    siel_texture_egyenesen, celvonal_texture, celkapu_texture;
 
 sf::Sprite bal_sprite, jobb_sprite, egyenes_sprite;
 
@@ -46,6 +47,7 @@ std::uint64_t score_ido = 0;
 
 class Bigyo;
 std::vector<Bigyo*> bigyok;
+std::vector<Bigyo*> also_bigyok;
 
 std::ostream& operator<<(std::ostream& os, sf::Vector2f const& v) {
   os << "(" << v.x << ", " << v.y << ")";
@@ -192,7 +194,7 @@ class Szikla : public Bigyo {
 
 class CelVonal : public Bigyo {
  public:
-  CelVonal(float x, float y) : c{cel_texture} {
+  CelVonal(float x, float y) : c{celvonal_texture} {
     c.setScale(cel_scale, cel_scale);
     c.setPosition(x, y);
   }
@@ -216,7 +218,7 @@ class CelVonal : public Bigyo {
   void move(const sf::Vector2f& offset) { c.move(offset); }
   void kiir(std::ostream& os) {
     sf::Vector2f p = c.getPosition();
-    os << "cel " << p.x << " " << p.y;
+    os << "celvonal " << p.x << " " << p.y;
   }
   float top() { return c.getGlobalBounds().top; }
 
@@ -224,6 +226,42 @@ class CelVonal : public Bigyo {
 
  private:
   sf::Sprite c;
+};
+
+class CelKapu : public Bigyo {
+ public:
+  CelKapu(float x, float y) : ck{celkapu_texture} {
+    ck.setScale(cel_scale, cel_scale);
+    ck.setPosition(x, y);
+  }
+  CelKapu(sf::Vector2f const& v) : CelKapu(v.x, v.y) {}
+  void setPosition(float x, float y) { ck.setPosition(x, y); }
+  sf::FloatRect getGlobalBounds() const { return ck.getGlobalBounds(); }
+  void draw(sf::RenderTarget& rt) const {
+    rt.draw(ck);
+    //    if (draw_hitbox) {
+    //      sf::FloatRect fak_global_bounds = getGlobalBounds();
+    //      const sf::FloatRect hb_2 = compute_fak_hitbox(fak_global_bounds);
+    //      sf::RectangleShape rectangle;
+    //      rectangle.setSize(sf::Vector2f{hb_2.width, hb_2.height});
+    //      rectangle.setOutlineColor(sf::Color::Yellow);
+    //      rectangle.setFillColor(sf::Color{0, 0, 0, 0});
+    //      rectangle.setOutlineThickness(5);
+    //      rectangle.setPosition(hb_2.left, hb_2.top);
+    //      rt.draw(rectangle);
+    //    }
+  }
+  void move(const sf::Vector2f& offset) { ck.move(offset); }
+  void kiir(std::ostream& os) {
+    sf::Vector2f p = ck.getPosition();
+    os << "celkapu " << p.x << " " << p.y;
+  }
+  float top() { return ck.getGlobalBounds().top; }
+
+  sf::FloatRect hitbox() const { return sf::FloatRect{}; }
+
+ private:
+  sf::Sprite ck;
 };
 
 class Zaszlok : public Bigyo {
@@ -280,10 +318,11 @@ void init(std::string fn) {
   szikla_texture.loadFromFile("szikla.png");
   zaszlo_texture_kek.loadFromFile("zaszlo_kek.png");
   zaszlo_texture_piros.loadFromFile("zaszlo_piros.png");
-  siel_texture_balra.loadFromFile("skiel_balra2.png");
-  siel_texture_jobbra.loadFromFile("skiel_jobbra2.png");
+  siel_texture_balra.loadFromFile("siel_balra3.png");
+  siel_texture_jobbra.loadFromFile("siel_jobbra3.png");
   siel_texture_egyenesen.loadFromFile("skiel_egyenes2.png");
-  cel_texture.loadFromFile("cel2.png");
+  celvonal_texture.loadFromFile("celvonal.png");
+  celkapu_texture.loadFromFile("celkapu.png");
 
   bal_sprite.setTexture(siel_texture_balra);
   jobb_sprite.setTexture(siel_texture_jobbra);
@@ -308,6 +347,8 @@ void init(std::string fn) {
 
   std::string sor;
 
+  float alja = std::numeric_limits<float>::max();
+
   while (std::getline(input, sor)) {
     std::string mi;
 
@@ -321,18 +362,24 @@ void init(std::string fn) {
       float x, y;
       is >> x >> y;
       bigyok.push_back(new Szikla(x, y));
-    } else if (mi == "cel") {
-      float x, y;
-      is >> x >> y;
-      bigyok.push_back(new CelVonal(x, y));
-
     } else if (mi == "zaszlo") {
       float x, y;
       std::string szin;
       is >> szin >> x >> y;
       bigyok.push_back(new Zaszlok(x, y, szin == "kek"));
     }
+    if (bigyok.size() == 0) {
+      continue;
+    }
+    sf::FloatRect gb = bigyok[bigyok.size() - 1]->getGlobalBounds();
+    float bottom = gb.top + gb.height;
+    if (alja < bottom) {
+      alja = bottom;
+    }
+
   }
+  bigyok.push_back(new CelKapu{0, alja + 0});
+  also_bigyok.push_back(new CelVonal{0, alja + 0});
 }
 
 const float sielo_hitbox_sfx = 0.45f;
@@ -352,6 +399,13 @@ sf::FloatRect compute_sielo_hitbox(sf::FloatRect const& br) {
 void draw_fak(sf::RenderTarget& rt) {
   for (int i = 0; i < bigyok.size(); ++i) {
     Bigyo* s = bigyok[i];
+    s->draw(rt);
+  }
+}
+
+void draw_alsok(sf::RenderTarget& rt) {
+  for (int i = 0; i < also_bigyok.size(); ++i) {
+    Bigyo* s = also_bigyok[i];
     s->draw(rt);
   }
 }
@@ -529,6 +583,7 @@ int main(int argc, char* argv[]) {
       kor_ido_us = kor_clock.getElapsedTime().asMicroseconds();
     }
     window.clear(sf::Color::White);
+    draw_alsok(window);
     draw_sielo(window);
     draw_fak(window);
     draw_time_and_score(window, kor_ido_us, score_ido);

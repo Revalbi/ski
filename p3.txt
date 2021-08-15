@@ -112,4 +112,4 @@ szikla 762 1356
 szikla 343 1398
 szikla 805 1789
 szikla 386 1826
-cel 0 10000
+
