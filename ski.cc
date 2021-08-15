@@ -321,7 +321,7 @@ void init(std::string fn) {
   siel_texture_balra.loadFromFile("siel_balra3.png");
   siel_texture_jobbra.loadFromFile("siel_jobbra3.png");
   siel_texture_egyenesen.loadFromFile("skiel_egyenes2.png");
-  celvonal_texture.loadFromFile("celvonal.png");
+  celvonal_texture.loadFromFile("celvonal2.png");
   celkapu_texture.loadFromFile("celkapu.png");
 
   bal_sprite.setTexture(siel_texture_balra);
@@ -347,7 +347,7 @@ void init(std::string fn) {
 
   std::string sor;
 
-  float alja = std::numeric_limits<float>::max();
+  float alja = std::numeric_limits<float>::min();
 
   while (std::getline(input, sor)) {
     std::string mi;
@@ -376,10 +376,10 @@ void init(std::string fn) {
     if (alja < bottom) {
       alja = bottom;
     }
-
+    std::cerr << alja << " " << bottom << std::endl;
   }
-  bigyok.push_back(new CelKapu{0, alja + 0});
-  also_bigyok.push_back(new CelVonal{0, alja + 0});
+  bigyok.push_back(new CelKapu{0, alja});
+  also_bigyok.push_back(new CelVonal{0, alja});
 }
 
 const float sielo_hitbox_sfx = 0.45f;
@@ -493,15 +493,13 @@ void on_key_up(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
 }
 
 void move(std::int64_t fus, bool turbo) {
-  if (turbo == false) {
+  float sebesseg = turbo ? -8.0f : -5.0f;
     for (int i = 0; i < bigyok.size(); ++i) {
-      bigyok[i]->move(sf::Vector2f{0.0f, -5.0f * fus / 16000.0f});
+      bigyok[i]->move(sf::Vector2f{0.0f, sebesseg * fus / 16000.0f});
     }
-  } else if (turbo == true) {
-    for (int i = 0; i < bigyok.size(); ++i) {
-      bigyok[i]->move(sf::Vector2f{0.0f, -8.0f * fus / 16000.0f});
+    for (int i = 0; i < also_bigyok.size(); ++i) {
+      also_bigyok[i]->move(sf::Vector2f{0.0f, sebesseg * fus / 16000.0f});
     }
-  }
 }
 
 void advance_score(std::int64_t fus, bool turbo) {
