@@ -21,6 +21,8 @@ const float v_h_gyors = 0.7f;
 const float sielo_scale = 0.25f;
 const std::uint64_t kemeny_buntetes = 5 * 1000000ll;
 const float cel_scale = 1.2f;
+const float alja_cel_tavolsag = 800.0f;
+const float sielo_world_y = 100.0f;
 
 enum class HitEvent { NONE, ZASZLO, KEMENY };
 
@@ -41,9 +43,13 @@ bool turbo = false;
 bool jobbra = false;
 bool balra = false;
 bool fut = true;
+bool automata = false;
 bool draw_hitbox = false;
 std::uint64_t added_time = 0;
 std::uint64_t score_ido = 0;
+float world_y = 0.0f;
+float alja;
+float sielo_magassag;
 
 class Bigyo;
 std::vector<Bigyo*> bigyok;
@@ -332,11 +338,13 @@ void init(std::string fn) {
   jobb_sprite.setScale(sielo_scale, sielo_scale);
   egyenes_sprite.setScale(sielo_scale, sielo_scale);
 
-  bal_sprite.setPosition(640 - bal_sprite.getGlobalBounds().width / 2.0f, 100);
+  bal_sprite.setPosition(640 - bal_sprite.getGlobalBounds().width / 2.0f, sielo_world_y);
   jobb_sprite.setPosition(640 - jobb_sprite.getGlobalBounds().width / 2.0f,
-                          100);
+                          sielo_world_y);
   egyenes_sprite.setPosition(
-      640 - egyenes_sprite.getGlobalBounds().width / 2.0f, 100);
+      640 - egyenes_sprite.getGlobalBounds().width / 2.0f, sielo_world_y);
+
+  sielo_magassag = egyenes_sprite.getGlobalBounds().height;
 
   // jobb_sprite.move(egyenes_sprite.getPosition().x +
   //                     jobb_sprite.getGlobalBounds().width -
@@ -347,7 +355,7 @@ void init(std::string fn) {
 
   std::string sor;
 
-  float alja = std::numeric_limits<float>::min();
+  alja = std::numeric_limits<float>::min();
 
   while (std::getline(input, sor)) {
     std::string mi;
@@ -376,10 +384,9 @@ void init(std::string fn) {
     if (alja < bottom) {
       alja = bottom;
     }
-    std::cerr << alja << " " << bottom << std::endl;
   }
-  bigyok.push_back(new CelKapu{0, alja});
-  also_bigyok.push_back(new CelVonal{0, alja});
+  bigyok.push_back(new CelKapu{0, alja + alja_cel_tavolsag});
+  also_bigyok.push_back(new CelVonal{0, alja + alja_cel_tavolsag});
 }
 
 const float sielo_hitbox_sfx = 0.45f;
@@ -494,12 +501,14 @@ void on_key_up(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
 
 void move(std::int64_t fus, bool turbo) {
   float sebesseg = turbo ? -8.0f : -5.0f;
+  float dy = sebesseg * fus / 16000.0f;
     for (int i = 0; i < bigyok.size(); ++i) {
-      bigyok[i]->move(sf::Vector2f{0.0f, sebesseg * fus / 16000.0f});
+      bigyok[i]->move(sf::Vector2f{0.0f, dy});
     }
     for (int i = 0; i < also_bigyok.size(); ++i) {
-      also_bigyok[i]->move(sf::Vector2f{0.0f, sebesseg * fus / 16000.0f});
+      also_bigyok[i]->move(sf::Vector2f{0.0f, dy});
     }
+    world_y += dy;
 }
 
 void advance_score(std::int64_t fus, bool turbo) {
@@ -547,6 +556,12 @@ void draw_time_and_score(sf::RenderTarget& rt, std::uint64_t kor_ido_us,
   rt.draw(text2);
 }
 
+void check_automata() {
+  if (world_y < -1 * (alja - sielo_world_y - sielo_magassag)) {
+    automata = true;
+  }
+}
+
 int main(int argc, char* argv[]) {
   init(argv[1]);
   sf::RenderWindow window(sf::VideoMode(1280, 720), "ski");
@@ -562,9 +577,9 @@ int main(int argc, char* argv[]) {
       if (event.type == sf::Event::Closed) {
         window.close();
         return 0;
-      } else if (event.type == sf::Event::KeyPressed) {
+      } else if (!automata && event.type == sf::Event::KeyPressed) {
         on_key_down(event.key, window);
-      } else if (event.type == sf::Event::KeyReleased) {
+      } else if (!automata && event.type == sf::Event::KeyReleased) {
         on_key_up(event.key, window);
       }
     }
@@ -575,6 +590,7 @@ int main(int argc, char* argv[]) {
           fut = false;
           break;
       }
+      check_automata();
       move(fus, turbo);
       advance_score(fus, turbo);
       sielo_move(jobbra, balra, fus);
