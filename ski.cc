@@ -5,11 +5,11 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include <limits>
 
 const float v_le = 50;  // pixels per second
 const float fa_scale = 0.15;
@@ -338,7 +338,8 @@ void init(std::string fn) {
   jobb_sprite.setScale(sielo_scale, sielo_scale);
   egyenes_sprite.setScale(sielo_scale, sielo_scale);
 
-  bal_sprite.setPosition(640 - bal_sprite.getGlobalBounds().width / 2.0f, sielo_world_y);
+  bal_sprite.setPosition(640 - bal_sprite.getGlobalBounds().width / 2.0f,
+                         sielo_world_y);
   jobb_sprite.setPosition(640 - jobb_sprite.getGlobalBounds().width / 2.0f,
                           sielo_world_y);
   egyenes_sprite.setPosition(
@@ -502,13 +503,13 @@ void on_key_up(sf::Event::KeyEvent const& e, sf::RenderTarget& rt) {
 void move(std::int64_t fus, bool turbo) {
   float sebesseg = turbo ? -8.0f : -5.0f;
   float dy = sebesseg * fus / 16000.0f;
-    for (int i = 0; i < bigyok.size(); ++i) {
-      bigyok[i]->move(sf::Vector2f{0.0f, dy});
-    }
-    for (int i = 0; i < also_bigyok.size(); ++i) {
-      also_bigyok[i]->move(sf::Vector2f{0.0f, dy});
-    }
-    world_y += dy;
+  for (int i = 0; i < bigyok.size(); ++i) {
+    bigyok[i]->move(sf::Vector2f{0.0f, dy});
+  }
+  for (int i = 0; i < also_bigyok.size(); ++i) {
+    also_bigyok[i]->move(sf::Vector2f{0.0f, dy});
+  }
+  world_y += dy;
 }
 
 void advance_score(std::int64_t fus, bool turbo) {
@@ -559,6 +560,40 @@ void draw_time_and_score(sf::RenderTarget& rt, std::uint64_t kor_ido_us,
 void check_automata() {
   if (world_y < -1 * (alja - sielo_world_y - sielo_magassag)) {
     automata = true;
+    jobbra = false;
+    balra = false;
+  }
+}
+
+float sielo_position_x(sf::Sprite const& s) {
+  float sielo_kozep_pos_x = s.getPosition().x + s.getGlobalBounds().width / 2;
+  return sielo_kozep_pos_x;
+  }
+
+void automata_siel(std::int64_t fus) {
+
+float sielo_pos;
+
+  if (balra) {
+    sielo_pos = sielo_position_x(bal_sprite);
+  } else if (jobbra) {
+    sielo_pos = sielo_position_x(jobb_sprite);
+  } else {
+    sielo_pos = sielo_position_x(egyenes_sprite);
+  }
+
+  if (sielo_pos < 640 - 1.25 * fus / 16000.0f) {
+    jobbra = true;
+    balra = false;
+    return;
+  } else if (sielo_pos > 640 + 1.25 * fus / 16000.0f) {
+    balra = true;
+    jobbra = false;
+    return;
+  } else {
+    jobbra = false;
+    balra = false;
+    return;
   }
 }
 
@@ -590,7 +625,12 @@ int main(int argc, char* argv[]) {
           fut = false;
           break;
       }
-      check_automata();
+      if (automata) {
+        automata_siel(fus);
+      } else {
+        check_automata();
+      }
+
       move(fus, turbo);
       advance_score(fus, turbo);
       sielo_move(jobbra, balra, fus);

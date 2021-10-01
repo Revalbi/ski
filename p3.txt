@@ -1,43 +1,32 @@
-
 fa 27 174
 zaszlo kek 157 9988
 fa 990 230
 fa 929 96
 fa -31 49
-fa 1055 491
-fa 984 388
 fa -178 365
 fa 71 943
-szikla 545 613
 fa 66 727
 fa 1010 736
 fa 190 1169
-szikla 264 1007
 fa 78 1287
 fa 877 1136
 fa 188 1577
-fa 457 1572
-fa 740 1537
 fa 900 1526
 fa 144 1881
-fa 544 1904
 fa 837 1884
 fa 948 1884
 fa 112 2284
-fa 377 2297
-fa 615 2272
-fa 927 2264
+zaszlo kek 624 2128
+zaszlo piros 327 1635
 fa 162 2640
-fa 424 2653
-fa 636 2640
 fa 919 2622
 fa 110 3028
 fa 395 3050
-fa 625 3031
+zaszlo kek 705 2858
 fa 871 3020
 fa 138 3414
 fa 512 3424
-fa 737 3410
+zaszlo piros 696 3288
 fa 930 3401
 fa 208 3800
 fa 469 3766
@@ -48,12 +37,12 @@ fa 573 4157
 fa 841 4128
 fa 1051 4112
 fa 246 4622
-fa 584 4597
-fa 766 4563
+zaszlo kek 688 4361
+fa 360 4582
 fa 1038 4529
 fa 253 5005
 fa 474 5007
-fa 729 4986
+zaszlo piros 445 4741
 fa 930 4977
 fa 237 5406
 fa 506 5408
@@ -65,7 +54,7 @@ fa 775 5779
 fa 976 5764
 fa 80 6162
 fa 474 6161
-fa 657 6142
+zaszlo kek 571 5986
 fa 906 6128
 fa 181 6505
 fa 445 6506
@@ -73,43 +62,55 @@ fa 567 6499
 fa 813 6491
 fa 132 6952
 fa 415 6956
-fa 677 6946
+zaszlo kek 623 6778
 fa 882 6938
 fa 106 7352
 fa 294 7373
 fa 635 7362
 fa 739 7344
 fa 271 7759
-fa 397 7760
+zaszlo kek 360 7559
 fa 657 7753
 fa 833 7745
 fa 273 8148
-fa 622 8153
+zaszlo piros 482 7988
 fa 837 8135
 fa 964 8120
 fa 278 8669
-fa 509 8657
+zaszlo kek 530 8383
 fa 788 8640
 fa 986 8624
 zaszlo kek 452 9170
 zaszlo piros 669 9571
-zaszlo kek 423 9984
-zaszlo kek 632 9996
+zaszlo kek 672 9993
+zaszlo piros 508 8797
 zaszlo kek 916 9997
 fa 1040 70
-szikla 286 391
-szikla 694 202
-szikla 335 182
-szikla 185 597
-szikla 734 446
-szikla 857 605
-szikla 771 345
+szikla 1131 432
 fa 1047 909
-szikla 852 870
-szikla 620 1071
 fa 1005 1320
-szikla 762 1356
-szikla 343 1398
-szikla 805 1789
-szikla 386 1826
-
+szikla 1226 607
+zaszlo piros 238 155
+zaszlo kek 629 476
+zaszlo piros 282 821
+zaszlo kek 674 1140
+fa 1160 2292
+zaszlo piros 313 2474
+fa 626 3031
+fa 1115 3464
+zaszlo kek 567 3686
+zaszlo piros 633 4027
+fa 985 4616
+fa 919 5044
+zaszlo kek 634 5131
+zaszlo piros 618 5565
+fa 801 6154
+zaszlo piros 616 6385
+fa 1000 6820
+zaszlo piros 499 7177
+fa 159 7735
+fa 1057 7917
+fa 300 8563
+zaszlo kek 411 9988
+zaszlo kek -104 9987
+zaszlo kek 1154 9997
