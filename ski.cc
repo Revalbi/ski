@@ -513,10 +513,12 @@ void move(std::int64_t fus, bool turbo) {
 }
 
 void advance_score(std::int64_t fus, bool turbo) {
-  if (turbo == false) {
-    score_ido = score_ido + fus;
-  } else if (turbo == true) {
-    score_ido = score_ido + fus * 5;
+  if (!automata) {
+    if (turbo == false) {
+      score_ido = score_ido + fus;
+    } else if (turbo == true) {
+      score_ido = score_ido + fus * 5;
+    }
   }
 }
 
@@ -568,11 +570,12 @@ void check_automata() {
 float sielo_position_x(sf::Sprite const& s) {
   float sielo_kozep_pos_x = s.getPosition().x + s.getGlobalBounds().width / 2;
   return sielo_kozep_pos_x;
-  }
+}
 
 void automata_siel(std::int64_t fus) {
+  turbo = true;
 
-float sielo_pos;
+  float sielo_pos;
 
   if (balra) {
     sielo_pos = sielo_position_x(bal_sprite);
